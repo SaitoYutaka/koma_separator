@@ -3,14 +3,27 @@ package main
 import (
 	"fmt"		// Ptintnl
 	"strings"	// Replace
-	"strconv"	// Itoa
 	"path"		// Dir, Ext
 	"syscall"	// O_CREAT
 	"image"		// Decode
 	"os"		// Exit, Open, Close
 	"image/draw"    // Draw
 	"image/png"     // Encode
+	"io/ioutil"     // ReadFile
+	"encoding/json" // Unmarshal
 )
+
+func getKomaPos()(map[string]interface{}){
+	js, _ := ioutil.ReadFile("js/frame.json")
+
+	var f interface{}
+	json.Unmarshal(js, &f)
+
+	m := f.(map[string]interface{})
+	koma := m["koma"].(map[string]interface{})
+
+	return koma
+}
 
 func usage() {
 	fmt.Println("usage: koma_split [filename(.png)]")
@@ -25,31 +38,6 @@ func checkSize(src image.Image) bool {
 	}
 
 	return true
-}
-
-func saveTitle(outFileName string, fileName string, src image.Image) {
-	const titleSizeX = 684
-	const titleSizeY = 73
-	outfile, _ := os.OpenFile(outFileName + "_title" + path.Ext(fileName), syscall.O_CREAT, 0777)
-	koma_title := image.NewRGBA(image.Rect(0, 0, titleSizeX, titleSizeY))
-	draw.Draw(koma_title, koma_title.Bounds(), src, image.Pt(87,98), draw.Src)
-	png.Encode(outfile, koma_title)
-	outfile.Close()
-}
-
-func saveKoma(outFileName string, fileName string, src image.Image) {
-	const XOffset = 87
-	const YOffset = 185
-	const Offset  = 233
-	const komaSizeX = 684 
-	const komaSizeY = 218
-	for i := 0; i < 4; i++ {
-		outfile, _ := os.OpenFile(outFileName + "_" + strconv.Itoa(i) + path.Ext(fileName), syscall.O_CREAT, 0777)
-		koma := image.NewRGBA(image.Rect(0, 0, komaSizeX, komaSizeY))
-		draw.Draw(koma, koma.Bounds(), src, image.Pt(XOffset, YOffset + Offset * i), draw.Src)
-		png.Encode(outfile, koma)
-		outfile.Close()
-	}
 }
 
 func main() {
@@ -67,6 +55,7 @@ func main() {
 		os.Exit(-1)
 	}
 
+
 	// Get image data
 	src, _, err := image.Decode(file)
 	if checkSize(src) == false {
@@ -80,6 +69,21 @@ func main() {
 
 	// Output Image file
 	outFileName := strings.Replace(fileName, path.Ext(fileName), "", -1)
-	saveTitle(outFileName, fileName, src)
-	saveKoma(outFileName, fileName, src)
+
+	komas := getKomaPos()
+	for suffix, v := range komas {
+		var komapos [4]int
+		switch vv := v.(type) {
+		case []interface{}:
+			for i, u := range vv {
+				komapos[i] = int(u.(float64))
+			}
+		default:
+		}
+		outfile, _ := os.OpenFile(outFileName + "_" + suffix + path.Ext(fileName), syscall.O_CREAT, 0777)
+		koma_title := image.NewRGBA(image.Rect(0, 0, komapos[2], komapos[3]))
+		draw.Draw(koma_title, koma_title.Bounds(), src, image.Pt(komapos[0], komapos[1]), draw.Src)
+		png.Encode(outfile, koma_title)
+		outfile.Close()
+	}
 }
