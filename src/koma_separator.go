@@ -13,14 +13,14 @@ import (
 	"encoding/json" // Unmarshal
 )
 
-func getKomaPos()(map[string]interface{}){
+func getKomaPos(s string)(map[string]interface{}){
 	js, _ := ioutil.ReadFile("js/frame.json")
 
 	var f interface{}
 	json.Unmarshal(js, &f)
 
 	m := f.(map[string]interface{})
-	koma := m["koma"].(map[string]interface{})
+	koma := m[s].(map[string]interface{})
 
 	return koma
 }
@@ -70,7 +70,7 @@ func main() {
 	// Output Image file
 	outFileName := strings.Replace(fileName, path.Ext(fileName), "", -1)
 
-	komas := getKomaPos()
+	komas := getKomaPos("template28")
 	for suffix, v := range komas {
 		var komapos [4]int
 		switch vv := v.(type) {
