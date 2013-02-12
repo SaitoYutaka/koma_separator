@@ -9,8 +9,10 @@ import (
 	"os"		// Exit, Open, Close
 	"image/draw"    // Draw
 	"image/png"     // Encode
+	"image/jpeg"    // Encode
 	"io/ioutil"     // ReadFile
 	"encoding/json" // Unmarshal
+	"flag"          // Bool, Parse, Args
 )
 
 func getKomaPos(s string)(map[string]interface{}){
@@ -26,7 +28,7 @@ func getKomaPos(s string)(map[string]interface{}){
 }
 
 func usage() {
-	fmt.Println("usage: koma_split [filename(.png)]")
+	fmt.Println("usage: koma_split [-jpg] filename(.png)")
 }
 
 func checkSize(src image.Image) bool {
@@ -40,21 +42,14 @@ func checkSize(src image.Image) bool {
 	return true
 }
 
-func main() {
+func getSourceImage(filename string)(image.Image){
 
-	if len(os.Args) != 2 {
-		usage()
-		os.Exit(-1)
-	}
-	
-	fileName := os.Args[1]
-	file, err := os.Open(fileName)
+	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println(err)
 		usage()
 		os.Exit(-1)
 	}
-
 
 	// Get image data
 	src, _, err := image.Decode(file)
@@ -66,6 +61,22 @@ func main() {
 		os.Exit(-1)
 	}
 	file.Close()
+	return src
+}
+
+func main() {
+
+	var saveJpeg *bool
+	saveJpeg = flag.Bool("jpg", false, "output jpeg files")
+	flag.Parse()
+
+	arg := flag.Args()
+	if len(arg) == 0 {
+		usage()
+		os.Exit(-1)
+	}
+	fileName := arg[0]
+	src := getSourceImage(fileName)
 
 	// Output Image file
 	outFileName := strings.Replace(fileName, path.Ext(fileName), "", -1)
@@ -80,10 +91,21 @@ func main() {
 			}
 		default:
 		}
-		outfile, _ := os.OpenFile(outFileName + "_" + suffix + path.Ext(fileName), syscall.O_CREAT, 0777)
+		
+		var outfile *os.File
+		if *saveJpeg {
+			outfile, _ = os.OpenFile(outFileName + "_" + suffix + ".jpg", syscall.O_CREAT, 0777)
+		}else{
+			outfile, _ = os.OpenFile(outFileName + "_" + suffix + path.Ext(fileName), syscall.O_CREAT, 0777)
+		}
+		
 		koma_title := image.NewRGBA(image.Rect(0, 0, komapos[2], komapos[3]))
 		draw.Draw(koma_title, koma_title.Bounds(), src, image.Pt(komapos[0], komapos[1]), draw.Src)
-		png.Encode(outfile, koma_title)
+		if *saveJpeg {
+			jpeg.Encode(outfile, koma_title, nil)
+		}else{
+			png.Encode(outfile, koma_title)
+		}
 		outfile.Close()
 	}
 }
