@@ -91,21 +91,19 @@ func main() {
 			}
 		default:
 		}
-		
-		var outfile *os.File
-		if *saveJpeg {
-			outfile, _ = os.OpenFile(outFileName + "_" + suffix + ".jpg", syscall.O_CREAT, 0777)
-		}else{
-			outfile, _ = os.OpenFile(outFileName + "_" + suffix + path.Ext(fileName), syscall.O_CREAT, 0777)
-		}
-		
+
 		koma_title := image.NewRGBA(image.Rect(0, 0, komapos[2], komapos[3]))
 		draw.Draw(koma_title, koma_title.Bounds(), src, image.Pt(komapos[0], komapos[1]), draw.Src)
+
+		var outfile *os.File
 		if *saveJpeg {
+			outfile, _ = os.OpenFile(outFileName + "_" + suffix + ".jpeg", syscall.O_CREAT, 0777)
 			jpeg.Encode(outfile, koma_title, nil)
 		}else{
+			outfile, _ = os.OpenFile(outFileName + "_" + suffix + ".png", syscall.O_CREAT, 0777)
 			png.Encode(outfile, koma_title)
 		}
+		
 		outfile.Close()
 	}
 }
